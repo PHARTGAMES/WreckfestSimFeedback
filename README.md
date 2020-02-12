@@ -37,7 +37,7 @@ USAGE INSTRUCTIONS
 
 3. A new dialog should show titled "Wreckfest Telemetry".
 
-4. Configure a new event and start it to get to the the event screen which shows your selected car as well as event, standing, difficulty and tune options.
+4. Inside Wreckfest, configure a new event and start it to get to the the event screen which shows your selected car as well as event, standing, difficulty and tune options.
 
 5. While on the event screen, press the "Initialize" button on the "Wreckfest Telemetry" dialog.
 
