@@ -172,6 +172,7 @@ namespace WFSTTelemetry
             if (t != null) t.Join();
         }
 
+        static float transformLerp = 0.25f;
         /// <summary>
         /// The thread funktion to poll the telemetry data and send TelemetryUpdated events.
         /// </summary>
@@ -188,14 +189,19 @@ namespace WFSTTelemetry
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            KalmanFilter accXFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.02f, 0.0f);
-            KalmanFilter accYFilter = new KalmanFilter(1, 1, 0.05f, 1, 0.1f, 0.0f);
-            KalmanFilter accZFilter = new KalmanFilter(1, 1, 0.05f, 1, 0.05f, 0.0f); //heave noisy af
-
-            NoiseFilter accXSmooth = new NoiseFilter(6, 1.0f);
-            NoiseFilter accYSmooth = new NoiseFilter(6, 0.5f);
-            NoiseFilter accZSmooth = new NoiseFilter(6, 1.0f);
-
+            KalmanFilter accXFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
+            KalmanFilter accYFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
+            KalmanFilter accZFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
+  /*          
+                        NoiseFilter accXSmooth = new NoiseFilter(6, 0.5f);
+                        NoiseFilter accYSmooth = new NoiseFilter(6, 0.5f);
+                        NoiseFilter accZSmooth = new NoiseFilter(6, 0.5f);
+    */        
+            
+            NestedSmooth accXSmooth = new NestedSmooth( 3, 6, 0.5f );
+            NestedSmooth accYSmooth = new NestedSmooth( 3, 6, 0.5f );
+            NestedSmooth accZSmooth = new NestedSmooth( 3, 6, 0.5f );
+            
             KalmanFilter velXFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.02f, 0.0f);
             KalmanFilter velZFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.02f, 0.0f);
 
@@ -208,6 +214,16 @@ namespace WFSTTelemetry
             NoiseFilter pitchFilter = new NoiseFilter(3);
             NoiseFilter rollFilter = new NoiseFilter(3);
             NoiseFilter yawFilter = new NoiseFilter(3);
+
+            KalmanFilter posXFilter = new KalmanFilter( 1, 1, 0.02f, 1, 0.1f, 0.0f );
+            KalmanFilter posYFilter = new KalmanFilter( 1, 1, 0.02f, 1, 0.1f, 0.0f );
+            KalmanFilter posZFilter = new KalmanFilter( 1, 1, 0.02f, 1, 0.1f, 0.0f );
+
+            NestedSmooth posXSmooth = new NestedSmooth( 12, 6, 0.5f );
+            NestedSmooth posYSmooth = new NestedSmooth( 12, 6, 0.5f );
+            NestedSmooth posZSmooth = new NestedSmooth( 12, 6, 0.5f );
+
+
 
             NoiseFilter slipAngleSmooth = new NoiseFilter(6, 0.25f);
 
@@ -261,8 +277,24 @@ namespace WFSTTelemetry
                         TelemetryLost();
                         break;
                     }
+                    /*
+                    rht = Vector3.Normalize( rht );
+                    up = Vector3.Normalize( up );
+                    fwd = Vector3.Normalize( fwd );
 
-                    if (!lastFrameValid)
+                    transform.M11 = rht.X;
+                    transform.M12 = rht.Y;
+                    transform.M13 = rht.Z;
+
+                    transform.M21 = up.X;
+                    transform.M22 = up.Y;
+                    transform.M23 = up.Z;
+
+                    transform.M31 = fwd.X;
+                    transform.M32 = fwd.Y;
+                    transform.M33 = fwd.Z;
+                    */
+                    if ( !lastFrameValid)
                     {
                         lastTransform = transform;
                         lastFrameValid = true;
@@ -276,8 +308,23 @@ namespace WFSTTelemetry
                     if (dt <= 0)
                         dt = 1.0f;
 
-                    Vector3 worldVelocity = (transform.Translation - lastTransform.Translation) / dt;
+                    //smooth translation
+                    //                    transform.Translation = Vector3.Lerp( lastTransform.Translation, transform.Translation, transformLerp );
+
+
+                    //                    transform.Translation = new Vector3( posXFilter.Filter( transform.Translation.X ), posYFilter.Filter( transform.Translation.Y ), posZFilter.Filter( transform.Translation.Z ) );
+                    //transform.Translation = new Vector3( posXSmooth.Filter( transform.Translation.X ), posYSmooth.Filter( transform.Translation.Y ), posZSmooth.Filter( transform.Translation.Z ) );
+
+
+                    //                    Debug.WriteLine( "Last World Z = " + lastTransform.Translation.Z );
+                    //                    Debug.WriteLine( "Curr World Z = " + transform.Translation.Z );
+
+                    Vector3 worldVelocity = ( transform.Translation - lastTransform.Translation ) / dt;
                     lastTransform = transform;
+
+//                    Debug.WriteLine( "deltaTime = " + dt );
+//                    Debug.WriteLine( "World Vel Z = " + worldVelocity.Z);
+//                    Debug.WriteLine( "-------------------------------------------------------------------------" );
 
 
                     Matrix4x4 rotation = new Matrix4x4();
@@ -300,7 +347,7 @@ namespace WFSTTelemetry
 
                     telemetryData.accX = localAcceleration.X * 10.0f;
                     telemetryData.accY = localAcceleration.Y * 100.0f;
-                    telemetryData.accZ = localAcceleration.Z * 1.0f;
+                    telemetryData.accZ = localAcceleration.Z * 10.0f;
 
 
                     double pitch = Math.Asin(-fwd.Y);
@@ -334,9 +381,15 @@ namespace WFSTTelemetry
                         telemetryToSend.Reset();
 
                         telemetryToSend.CopyFields(telemetryData);
-                        telemetryToSend.accX = accXSmooth.Filter(accXFilter.Filter(telemetryData.accX));
-                        telemetryToSend.accY = accYSmooth.Filter(accYFilter.Filter(telemetryData.accY));
-                        telemetryToSend.accZ = accZSmooth.Filter(accZFilter.Filter(telemetryData.accZ));
+                        /*
+                                                //accXSmooth.Filter(accXFilter.Filter(telemetryData.accX));
+                                                //telemetryToSend.accY = accYSmooth.Filter(accYFilter.Filter(telemetryData.accY));
+                                                //telemetryToSend.accZ = accZSmooth.Filter(accZFilter.Filter(telemetryData.accZ));
+                        */
+                        telemetryToSend.accX = accXSmooth.Filter( telemetryData.accX );
+                        telemetryToSend.accY = accYSmooth.Filter( telemetryData.accY );
+                        telemetryToSend.accZ = accZSmooth.Filter( telemetryData.accZ );
+
 
                         telemetryToSend.pitchPos = pitchFilter.Filter(telemetryData.pitchPos);
                         telemetryToSend.rollPos = rollFilter.Filter(telemetryData.rollPos);
@@ -356,7 +409,7 @@ namespace WFSTTelemetry
                         RaiseEvent(OnTelemetryUpdate, args);
 
                         lastTelemetryData = telemetryToSend;
-                        Thread.Sleep(5);
+                        Thread.Sleep(1000/30);
                     }
                     else if (sw.ElapsedMilliseconds > 500)
                     {
