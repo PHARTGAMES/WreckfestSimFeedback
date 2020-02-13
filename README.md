@@ -14,6 +14,8 @@ RELEASE NOTES
 =============
 v1.0 - First release.
 
+v1.1 - Increased sample rate, improves linear acceleration response.
+
 INSTALLATION INSTRUCTIONS 
 =========================
 
