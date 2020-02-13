@@ -14,7 +14,6 @@ namespace NoiseFilters
         private int currSample = 0;
         private float maxInputDelta = float.MaxValue; //maximum input delta between last and new sample.
         private float currPrediction = 0.0f;
-        private float[] velocities;
 
         //higher _maxSampleCount = more smoothing
         public NoiseFilter( int _maxSampleCount, float _maxInputDelta = float.MaxValue )

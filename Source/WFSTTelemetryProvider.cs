@@ -409,7 +409,7 @@ namespace WFSTTelemetry
                         RaiseEvent(OnTelemetryUpdate, args);
 
                         lastTelemetryData = telemetryToSend;
-                        Thread.Sleep(1000/30);
+                        Thread.Sleep(1000/100);
                     }
                     else if (sw.ElapsedMilliseconds > 500)
                     {
