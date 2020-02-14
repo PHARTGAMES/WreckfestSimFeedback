@@ -18,6 +18,8 @@ v1.1 - Increased sample rate, improves linear acceleration response.
 
 v1.2 - Added player selection combo box to select player in multiplayer.
 
+v1.3 - Fixed roll calculation, polished profile.
+
 INSTALLATION INSTRUCTIONS 
 =========================
 

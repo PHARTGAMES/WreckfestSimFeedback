@@ -172,7 +172,6 @@ namespace WFSTTelemetry
             if (t != null) t.Join();
         }
 
-        static float transformLerp = 0.25f;
         /// <summary>
         /// The thread funktion to poll the telemetry data and send TelemetryUpdated events.
         /// </summary>
@@ -188,15 +187,6 @@ namespace WFSTTelemetry
             float lastYaw = 0.0f;
             Stopwatch sw = new Stopwatch();
             sw.Start();
-
-            KalmanFilter accXFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
-            KalmanFilter accYFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
-            KalmanFilter accZFilter = new KalmanFilter(1, 1, 0.02f, 1, 0.1f, 0.0f);
-  /*          
-                        NoiseFilter accXSmooth = new NoiseFilter(6, 0.5f);
-                        NoiseFilter accYSmooth = new NoiseFilter(6, 0.5f);
-                        NoiseFilter accZSmooth = new NoiseFilter(6, 0.5f);
-    */        
             
             NestedSmooth accXSmooth = new NestedSmooth( 3, 6, 0.5f );
             NestedSmooth accYSmooth = new NestedSmooth( 3, 6, 0.5f );
@@ -277,23 +267,7 @@ namespace WFSTTelemetry
                         TelemetryLost();
                         break;
                     }
-                    /*
-                    rht = Vector3.Normalize( rht );
-                    up = Vector3.Normalize( up );
-                    fwd = Vector3.Normalize( fwd );
 
-                    transform.M11 = rht.X;
-                    transform.M12 = rht.Y;
-                    transform.M13 = rht.Z;
-
-                    transform.M21 = up.X;
-                    transform.M22 = up.Y;
-                    transform.M23 = up.Z;
-
-                    transform.M31 = fwd.X;
-                    transform.M32 = fwd.Y;
-                    transform.M33 = fwd.Z;
-                    */
                     if ( !lastFrameValid)
                     {
                         lastTransform = transform;
@@ -308,24 +282,9 @@ namespace WFSTTelemetry
                     if (dt <= 0)
                         dt = 1.0f;
 
-                    //smooth translation
-                    //                    transform.Translation = Vector3.Lerp( lastTransform.Translation, transform.Translation, transformLerp );
-
-
-                    //                    transform.Translation = new Vector3( posXFilter.Filter( transform.Translation.X ), posYFilter.Filter( transform.Translation.Y ), posZFilter.Filter( transform.Translation.Z ) );
-                    //transform.Translation = new Vector3( posXSmooth.Filter( transform.Translation.X ), posYSmooth.Filter( transform.Translation.Y ), posZSmooth.Filter( transform.Translation.Z ) );
-
-
-                    //                    Debug.WriteLine( "Last World Z = " + lastTransform.Translation.Z );
-                    //                    Debug.WriteLine( "Curr World Z = " + transform.Translation.Z );
 
                     Vector3 worldVelocity = ( transform.Translation - lastTransform.Translation ) / dt;
                     lastTransform = transform;
-
-//                    Debug.WriteLine( "deltaTime = " + dt );
-//                    Debug.WriteLine( "World Vel Z = " + worldVelocity.Z);
-//                    Debug.WriteLine( "-------------------------------------------------------------------------" );
-
 
                     Matrix4x4 rotation = new Matrix4x4();
                     rotation = transform;
@@ -350,24 +309,28 @@ namespace WFSTTelemetry
                     telemetryData.accZ = localAcceleration.Z * 10.0f;
 
 
-                    double pitch = Math.Asin(-fwd.Y);
-                    double yaw = Math.Atan2(fwd.X, fwd.Z);
+                    float pitch = (float)Math.Asin(-fwd.Y);
+                    float yaw = (float)Math.Atan2(fwd.X, fwd.Z);
 
-                    double planeRightX = Math.Sin(yaw);
-                    double planeRightZ = -Math.Cos(yaw);
+                    float roll = 0.0f;
+                    Vector3 rhtPlane = rht;
+                    rhtPlane.Y = 0;
+                    rhtPlane = Vector3.Normalize( rhtPlane );
+                    if(rhtPlane.Length() <= float.Epsilon)
+                    {
+                        roll = -(float)(Math.Sign( rht.Y ) * Math.PI);
+                    }
+                    else
+                    {
+                        roll = -(float)Math.Asin( Vector3.Dot( up, rhtPlane ));
+                    }
 
-                    // Roll is the rightward lean of our up vector, computed here using a dot product.
-                    double roll = Math.Asin(up.Z * planeRightX + up.X * planeRightZ);
-                    // If we're twisted upside-down, return a roll in the range +-(pi/2, pi)
-                    if (up.Y < 0)
-                        roll = Math.Sign(roll) * Math.PI - roll;
+                    telemetryData.pitchPos = pitch;
+                    telemetryData.yawPos = yaw;
+                    telemetryData.rollPos = roll;
 
-                    telemetryData.pitchPos = (float)pitch;
-                    telemetryData.yawPos = (float)yaw;
-                    telemetryData.rollPos = (float)roll;
-
-                    telemetryData.yawRate = CalculateAngularChange(lastYaw, (float)yaw) * (180.0f / (float)Math.PI);
-                    lastYaw = (float)yaw;
+                    telemetryData.yawRate = CalculateAngularChange(lastYaw, yaw) * (180.0f / (float)Math.PI);
+                    lastYaw = yaw;
 
                     // otherwise we are connected
                     IsConnected = true;
@@ -381,11 +344,7 @@ namespace WFSTTelemetry
                         telemetryToSend.Reset();
 
                         telemetryToSend.CopyFields(telemetryData);
-                        /*
-                                                //accXSmooth.Filter(accXFilter.Filter(telemetryData.accX));
-                                                //telemetryToSend.accY = accYSmooth.Filter(accYFilter.Filter(telemetryData.accY));
-                                                //telemetryToSend.accZ = accZSmooth.Filter(accZFilter.Filter(telemetryData.accZ));
-                        */
+
                         telemetryToSend.accX = accXSmooth.Filter( telemetryData.accX );
                         telemetryToSend.accY = accYSmooth.Filter( telemetryData.accY );
                         telemetryToSend.accZ = accZSmooth.Filter( telemetryData.accZ );
@@ -431,6 +390,7 @@ namespace WFSTTelemetry
             reader.CloseHandle();
 
         }
+
 
         float CalculateAngularChange(float sourceA, float targetA)
         {
