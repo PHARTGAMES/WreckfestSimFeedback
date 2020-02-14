@@ -16,6 +16,8 @@ v1.0 - First release.
 
 v1.1 - Increased sample rate, improves linear acceleration response.
 
+v1.2 - Added player selection combo box to select player in multiplayer.
+
 INSTALLATION INSTRUCTIONS 
 =========================
 
@@ -46,6 +48,8 @@ USAGE INSTRUCTIONS
 6. Wait for the progress bar to finish; if the process works you should see "Success!" in the centre of the dialog.
 
 7. From this point you should have telemetry until you quit the event. When you quit the event telemetry will be lost. Repeat steps 4 through 7 for each new event.
+
+8. For multiplayer, look at the list of players in the lobby, first player is 00, last player is 23, 9th player will be 08. Find your name and count from the top. When the event starts, change the Choose Player combo box to match the number of your player and click Initialize.
 
 
 AUTHOR

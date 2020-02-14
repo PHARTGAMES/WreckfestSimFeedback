@@ -111,7 +111,7 @@ namespace WFSTTelemetry
             scan.ScanCompleted += new RegularMemoryScan.ScanCompletedEventHandler(scan_ScanCompleted);
             scan.ScanCanceled += new RegularMemoryScan.ScanCanceledEventHandler(scan_ScanCanceled);
 
-            scan.StartScanForString("carRootNode00");
+            scan.StartScanForString("carRootNode" + scanDialog.playerComboBox.Text);
         }
 
         /// <summary>
