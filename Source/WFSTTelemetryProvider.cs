@@ -318,7 +318,7 @@ namespace WFSTTelemetry
                     rhtPlane = Vector3.Normalize( rhtPlane );
                     if(rhtPlane.Length() <= float.Epsilon)
                     {
-                        roll = -(float)(Math.Sign( rht.Y ) * Math.PI);
+                        roll = -(float)(Math.Sign( rht.Y ) * Math.PI * 0.5f);
                     }
                     else
                     {
